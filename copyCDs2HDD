@@ -1,0 +1,35 @@
+#! /bin/bash
+# watch optical drive for a new cd. when detected create folder in $output with the name of the disk and copy its content there.
+output="/somewhere/"
+oldcd=""
+while true
+	do newcd=""
+	while [ "$newcd" == "$oldcd" ] || [ "$newcd" == "" ]
+		do echo "waiting"
+		sleep 1
+		newcd=`udevadm info -n dvd -q property | sed -n 's/^ID_FS_LABEL=//p'`
+	done
+	echo "doing things"
+
+	echo "################# $newcd" >> $output/cp.log
+	echo "#################" >> $output/log.log 
+	echo "starting $newcd at `date`" >> $output/log.log 
+
+	echo "unmounting" >> $output/log.log 
+	umount /media/cdrom &>> $output/log.log 
+
+	echo "mounting" >> $output/log.log 
+	mount /dev/sr1 /media/cdrom -o ro &>> $output/log.log
+	mkdir $output/$newcd
+
+	echo "copying" >> $output/log.log 
+	rsync -a /media/cdrom/* $output/$newcd &>> $output/cp.log
+	echo "copying done" >> $output/log.log 
+
+	sync
+	echo "$newcd done!" >> $output/log.log 
+	eject
+
+	oldcd=$newcd
+done
+
